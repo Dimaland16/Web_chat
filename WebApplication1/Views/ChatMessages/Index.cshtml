@@ -1,0 +1,257 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Application</title>
+    <link href="~/css/chat.css" rel="stylesheet" />
+    <link href="~/css/site.css" rel="stylesheet" />
+
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/3.1.18/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="row clearfix">
+            <div class="col-lg-12">
+                <div class="card chat-app">
+                    <div id="plist" class="people-list">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" id="searchInput" placeholder="Search...">
+                        </div>
+                        <ul class="list-unstyled chat-list mt-2 mb-0" id="userList">
+                            <!-- Существующие пользователи здесь -->
+                        </ul>
+                    </div>
+                    <div class="chat">
+                        <div class="chat-header clearfix">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <a href="javascript:void(0);" data-toggle="modal" data-target="#view_info">
+                                        <img id="topAvatar" src="https://bootdey.com/img/Content/avatar/avatar2.png" alt="avatar">
+                                    </a>
+                                    <div class="chat-about">
+                                        <h6 class="m-b-0" id="chatWith">Developer: Dmitry Kalitsko</h6>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 hidden-sm text-right">
+                                    <a href="javascript:void(0);" class="btn btn-outline-secondary"><i class="fa fa-camera"></i></a>
+                                    <a href="javascript:void(0);" class="btn btn-outline-primary"><i class="fa fa-image"></i></a>
+                                    <a href="javascript:void(0);" class="btn btn-outline-info"><i class="fa fa-cogs"></i></a>
+                                    <a href="javascript:void(0);" class="btn btn-outline-warning"><i class="fa fa-question"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-history" id="chatHistory">
+                            <ul class="m-b-0">
+                                <!-- Сообщения чата здесь -->
+                            </ul>
+                        </div>
+                        <div class="chat-message clearfix">
+                            <div class="input-group mb-0">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="sendButton"><i class="fa fa-send"></i></span>
+                                </div>
+                                <input type="text" class="form-control" id="messageInput" placeholder="Enter text here...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+
+        $(document).ready(function () {
+            const searchInput = $('#searchInput');
+            const userList = $('#userList');
+            let currentUserName = null;
+            let currentChatUserId = null;
+            let currentChatUserName = null;
+            let chatExists = {}; // объект для отслеживания существующих чатов
+            let chatHistories = {}; // объект для хранения истории сообщений каждого чата
+            const avatars = [
+                'https://bootdey.com/img/Content/avatar/avatar1.png',
+                'https://bootdey.com/img/Content/avatar/avatar2.png',
+                'https://bootdey.com/img/Content/avatar/avatar3.png',
+                'https://bootdey.com/img/Content/avatar/avatar4.png',
+                'https://bootdey.com/img/Content/avatar/avatar5.png',
+                'https://bootdey.com/img/Content/avatar/avatar6.png',
+                'https://bootdey.com/img/Content/avatar/avatar7.png',
+                'https://bootdey.com/img/Content/avatar/avatar8.png'
+            ];
+
+            const connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+
+            connection.on("ReceiveMessage", (user, message) => {
+                console.log('Received message:', user, message);
+                const chatHistory = $('#chatHistory ul');
+
+                // Сохранение сообщения в chatHistories
+                if (!chatHistories[currentChatUserId]) {
+                    chatHistories[currentChatUserId] = [];
+                }
+                chatHistories[currentChatUserId].push({ senderId: user, message: message, timestamp: new Date() });
+
+                // Добавление сообщения в текущий чат
+                chatHistory.append(`
+                            <li class="clearfix">
+                                <div class="message-data ${user === currentUserName ? '' : 'text-right'}">
+                                    <span class="message-data-time">${new Date().toLocaleTimeString()}</span>
+                                </div>
+                                <div class="message ${user === currentUserName ? 'my-message' : 'other-message float-right'}">${message}</div>
+                            </li>
+                        `);
+            });
+
+            connection.on("CreateChat", (username, groupName, receiverName) => {
+                if (!chatExists[receiverName]) {
+                    currentChatUserName = receiverName;
+                    currentChatUserId = receiverName;;
+
+                    // Установка текущего чата
+                    //$('#chatWith').text(currentChatUserName);
+
+
+                    console.log('New chat created with user:', receiverName);
+
+                    chatExists[receiverName] = true;
+                    avatar = getRandomAvatar();
+
+                    userList.append(`
+                                        <li class="clearfix" data-user-id="${receiverName}" data-username="${receiverName}" data-avatar="${avatar}">
+                                    <img src="${avatar}" alt="avatar">
+                                    <div class="about">
+                                        <div class="name">${receiverName}</div>
+                                        <div class="status"> <i class="fa fa-circle offline"></i> </div>
+                                    </div>
+                                </li>
+                            `);
+                }
+            });
+
+            connection.on("SetUpName", (user) => {
+                $('#chatWith').text(user);
+            });
+
+            connection.start().then(() => {
+                console.log('SignalR connected');
+                // Установка идентификатора текущего пользователя
+                connection.invoke("GetCurrentUserId").then(userId => {
+                    currentUserName = userId;
+                });
+            }).catch(err => {
+                console.error('SignalR error:', err.toString());
+            });
+
+            $('#sendButton').on('click', function () {
+                const messageInput = $('#messageInput');
+                const message = messageInput.val();
+                if (message && currentChatUserName) {
+                    console.log('Sending message to user:', currentChatUserName.toString(), message.toString());
+                    connection.invoke("SendMessageToUser", currentChatUserName.toString(), message.toString())
+                        .catch(err => {
+                            console.error('Error sending message:', err.toString());
+                            alert(`Error sending message: ${err.toString()}`);
+                        });
+                }
+            });
+
+            searchInput.on('keyup', function (e) {
+                if (e.key === 'Enter') {
+                    const query = $(this).val();
+                    if (query) {
+                        console.log('Searching for user:', query);
+                        $.ajax({
+                            url: '/ChatMessages/SearchUser',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ username: query }),
+                            success: function (data) {
+                                console.log('Search results:', data);
+                                data.forEach(user => {
+                                    if (!chatExists[user.username]) {
+                                        chatExists[user.username] = true;
+                                        const avatar = getRandomAvatar();
+
+                                        userList.append(`
+                                                    <li class="clearfix" data-user-id="${user.username}" data-username="${user.username}" data-avatar="${avatar}">
+                                                        <img src="${avatar}" alt="avatar">
+                                                        <div class="about">
+                                                            <div class="name">${user.username}</div>
+                                                            <div class="status"> <i class="fa fa-circle offline"></i> </div>
+                                                        </div>
+                                                    </li>
+                                                `);
+                                    }
+                                });
+                                searchInput.val('');
+                            }
+                        });
+                    }
+                }
+            });
+
+            userList.on('click', 'li', function () {
+                currentChatUserId = $(this).data('user-id');
+                currentChatUserName = $(this).data('username');
+                const avatar = $(this).data('avatar');
+
+                console.log('Opening chat with user:', currentChatUserId, currentChatUserName);
+
+                // Установка текущего чата
+                $('#chatWith').text(currentChatUserName);
+                $('#topAvatar').attr('src', avatar);
+
+                const chatHistory = $('#chatHistory ul');
+                @**@
+                chatHistory.empty();
+
+                // Проверка наличия сообщений в chatHistories
+                if (chatHistories[currentChatUserId]) {
+                    chatHistories[currentChatUserId].forEach(msg => {
+                        chatHistory.append(`
+                                                    <li class="clearfix">
+                                                                <div class="message-data ${msg.senderId === currentUserName ? '' : 'text-right'}">
+                                                            <span class="message-data-time">${new Date(msg.timestamp).toLocaleTimeString()}</span>
+                                                        </div>
+                                                        <div class="message ${msg.senderId === currentUserName ? 'my-message' : 'other-message float-right'}">${msg.message}</div>
+                                                    </li>
+                                                `);
+                    });
+                } else {
+                    $.ajax({
+                        url: `/ChatMessages/PrivateChat?userId=${currentChatUserId}`,
+                        type: 'GET',
+                        success: function (messages) {
+                            console.log('Chat history:', messages);
+
+                            chatHistories[currentChatUserId] = messages;
+
+                            messages.forEach(msg => {
+                                chatHistory.append(`
+                                            <li class="clearfix">
+                                                <div class="message-data ${msg.senderId === currentUserName ? 'text-right' : ''}">
+                                                    <span class="message-data-time">${new Date(msg.timestamp).toLocaleTimeString()}</span>
+                                                </div>
+                                                <div class="message ${msg.senderId === currentUserName ? 'my-message' : 'other-message float-right'}">${msg.message}</div>
+                                            </li>
+                                        `);
+                            });
+                        }
+                    });
+                }
+            });
+
+            function getRandomAvatar() {
+                const randomIndex = Math.floor(Math.random() * avatars.length);
+                return avatars[randomIndex];
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+﻿@{
+    ViewData["Title"] = "Welcome to Web Chat";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Web Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .my_container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            text-align: center;
+
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 180px;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #4CAF50;
+        }
+
+        p {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .buttons {
+            margin-top: 20px;
+        }
+
+            .buttons a {
+                text-decoration: none;
+                padding: 15px 30px;
+                margin: 5px;
+                border-radius: 5px;
+                background-color: #4CAF50;
+                color: white;
+                font-size: 18px;
+                transition: background-color 0.3s;
+            }
+
+                .buttons a:hover {
+                    background-color: #45a049;
+                }
+    </style>
+</head>
+<body>
+    <div class="my_container">
+        <h1>Welcome to XChat</h1>
+        <p>Connect with your friends and colleagues in real-time.</p>
+        <div class="buttons">
+            <a href="/Login">Login</a>
+            <a href="/Register">Register</a>
+        </div>
+    </div>
+</body>
+</html>
